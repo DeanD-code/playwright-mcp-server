@@ -4,16 +4,16 @@ FROM mcr.microsoft.com/playwright:v1.54.2-noble
 # Set working directory
 WORKDIR /app
 
+# Create non-root user for security with proper home directory
+RUN addgroup --system playwright && \
+    adduser --system --ingroup playwright --home /home/playwright playwright
+
 # Install @playwright/mcp globally with specific version
 RUN npm install -g @playwright/mcp@0.0.32
 
 # Install Chrome browser and dependencies required by Playwright
-# Explicitly install to ensure MCP can find them
+# Install as root first, then copy to user directory
 RUN npx playwright install chrome && npx playwright install-deps chrome
-
-# Create non-root user for security with proper home directory
-RUN addgroup --system playwright && \
-    adduser --system --ingroup playwright --home /home/playwright playwright
 
 # Copy the entrypoint script and set permissions
 COPY entrypoint.sh /app/entrypoint.sh
@@ -22,6 +22,11 @@ RUN chmod +x /app/entrypoint.sh
 # Set up npm directories and change ownership in one layer
 RUN mkdir -p /home/playwright/.npm && \
     chown -R playwright:playwright /app /home/playwright
+
+# Copy Playwright browsers to user directory and set proper permissions
+RUN mkdir -p /home/playwright/.cache/ms-playwright && \
+    cp -r /root/.cache/ms-playwright/* /home/playwright/.cache/ms-playwright/ 2>/dev/null || true && \
+    chown -R playwright:playwright /home/playwright/.cache
 
 # Switch to non-root user
 USER playwright
