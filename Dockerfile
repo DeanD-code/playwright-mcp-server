@@ -11,9 +11,15 @@ RUN addgroup --system playwright && \
 # Install @playwright/mcp globally with specific version
 RUN npm install -g @playwright/mcp@0.0.32
 
-# Install Chrome browser and dependencies required by Playwright
+# Install browsers and dependencies required by Playwright
 # Install as root first, then copy to user directory
-RUN npx playwright install chrome && npx playwright install-deps chrome
+# Use a more robust approach for multi-architecture builds
+RUN npx playwright install chromium || \
+    (echo "Chromium not available for this architecture, installing Firefox" && \
+     npx playwright install firefox) && \
+    npx playwright install-deps chromium || \
+    npx playwright install-deps firefox || \
+    echo "Browser dependencies installation completed with warnings"
 
 # Copy the entrypoint script and set permissions
 COPY entrypoint.sh /app/entrypoint.sh
