@@ -13,13 +13,16 @@ RUN npm install -g @playwright/mcp@0.0.32
 
 # Install browsers and dependencies required by Playwright
 # Install as root first, then copy to user directory
-# Use a more robust approach for multi-architecture builds
-RUN npx playwright install chromium || \
-    (echo "Chromium not available for this architecture, installing Firefox" && \
-     npx playwright install firefox) && \
-    npx playwright install-deps chromium || \
-    npx playwright install-deps firefox || \
-    echo "Browser dependencies installation completed with warnings"
+# Use architecture-specific browser installation
+RUN if [ "$(uname -m)" = "x86_64" ]; then \
+        echo "Installing Chrome for AMD64 architecture" && \
+        npx playwright install chrome && \
+        npx playwright install-deps chrome; \
+    else \
+        echo "Installing Firefox for ARM64 architecture" && \
+        npx playwright install firefox && \
+        npx playwright install-deps firefox; \
+    fi
 
 # Copy the entrypoint script and set permissions
 COPY entrypoint.sh /app/entrypoint.sh
